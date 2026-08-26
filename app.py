@@ -40,7 +40,7 @@ def cargar_datos():
     df = pd.read_sql_query(query, conn)
     conn.close()
     if not df.empty:
-        df["timestamp"] = pd.to_datetime(df["timestamp"])
+        df["timestamp"] = pd.to_datetime(df["timestamp"], format="ISO8601", utc=True)
         df["fecha"] = df["timestamp"].dt.date
     return df
 
