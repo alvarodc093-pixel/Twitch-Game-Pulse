@@ -14,7 +14,7 @@ import sqlite3
 import os
 import chromadb
 import ollama
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 DB_PATH = "data/twitch_pulse.db"
 CHROMA_PATH = "data/chroma"
@@ -99,7 +99,7 @@ def sidebar_filtros(df):
         fecha_inicio, fecha_fin = None, None
 
     st.sidebar.markdown("---")
-    st.sidebar.markdown(f"**Última actualización:** {datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC")
+    st.sidebar.markdown(f"**Última actualización:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')} UTC")
 
     return fecha_inicio, fecha_fin
 

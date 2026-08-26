@@ -10,7 +10,7 @@ Requiere que exista data/twitch_pulse.db con datos de ingesta.py.
 import sqlite3
 import os
 import chromadb
-from datetime import datetime
+from datetime import datetime, timezone
 
 DB_PATH = "data/twitch_pulse.db"
 CHROMA_PATH = "data/chroma"
@@ -21,7 +21,7 @@ def obtener_snapshots(db_path, dias=7):
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
 
-    cutoff = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    cutoff = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     from datetime import timedelta
     cutoff = cutoff - timedelta(days=dias)
 

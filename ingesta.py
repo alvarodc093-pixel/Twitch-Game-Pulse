@@ -11,7 +11,7 @@ import time
 import sys
 import toml
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import random
 
 BASE_URL = "https://api.twitch.tv/helix"
@@ -143,7 +143,7 @@ def guardar_juego(conn, juego):
 
 def guardar_snapshot(conn, juego_id, viewers, num_streams):
     """Guarda un snapshot de audiencia con timestamp UTC."""
-    timestamp = datetime.utcnow().isoformat()
+    timestamp = datetime.now(timezone.utc).isoformat()
     conn.execute(
         "INSERT INTO snapshots_audiencia (juego_id, timestamp, viewers, num_streams) VALUES (?, ?, ?, ?)",
         (juego_id, timestamp, viewers, num_streams),
@@ -154,7 +154,7 @@ def guardar_snapshot(conn, juego_id, viewers, num_streams):
 def ejecutar_ingesta():
     """Ejecuta la ingesta completa desde la API de Twitch."""
     print("=== Twitch Game Pulse — Ingesta de datos ===")
-    print(f"Fecha: {datetime.utcnow().isoformat()}Z\n")
+    print(f"Fecha: {datetime.now(timezone.utc).isoformat()}Z\n")
 
     client_id, client_secret = cargar_configuracion()
     token = obtener_token(client_id, client_secret)
@@ -212,7 +212,7 @@ def generar_datos_sinteticos(db_path=DB_PATH, dias=14):
     ]
 
     conn = inicializar_db(db_path)
-    ahora = datetime.utcnow()
+    ahora = datetime.now(timezone.utc)
 
     print(f"Generando {dias} días de datos para {len(JUEGOS_SIMULADOS)} juegos...\n")
 
