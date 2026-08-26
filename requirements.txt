@@ -1,0 +1,9 @@
+streamlit>=1.37
+pandas>=2.0
+plotly>=5.18
+requests>=2.31
+chromadb>=0.4
+ollama>=0.1
+toml>=0.10
+jupyter
+ipykernel
