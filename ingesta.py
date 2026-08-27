@@ -6,9 +6,11 @@ Uso:
     python ingesta.py --sintetico     # Genera datos sintéticos para demo
 """
 
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
+
 import sqlite3
 import time
-import sys
 import toml
 import requests
 from datetime import datetime, timedelta, timezone
