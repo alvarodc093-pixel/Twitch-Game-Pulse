@@ -468,7 +468,7 @@ PREGUNTA: {pregunta}
 
 RESPUESTA (en español, concisa y basada en los datos):"""
     try:
-        response = ollama.chat(model="qwen3:1.7b",
+        response = ollama.chat(model="qwen3.6:latest",
             messages=[{"role": "user", "content": prompt}])
         return response["message"]["content"]
     except Exception as e:

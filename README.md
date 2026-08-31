@@ -8,12 +8,12 @@
 
 Hoy es difícil saber, sin herramientas de pago (SullyGnome, StreamElements Analytics), qué juegos están creciendo o cayendo en audiencia de Twitch. Detectar ese movimiento a tiempo es la señal que usa la industria para decidir dónde invertir en marketing, patrocinio de streamers o lanzamiento de contenido.
 
-**Twitch Game Pulse** resuelve esto con un dashboard gratuito que muestra en tiempo real (o cercano) qué juegos están ganando tracción, cómo evoluciona su audiencia y qué géneros dominan la plataforma.
+**Twitch Game Pulse** resuelve esto con un dashboard gratuito que muestra en tiempo real qué juegos están ganando tracción, cómo evoluciona su audiencia y qué géneros dominan la plataforma. Además, incluye un **chat con IA** que responde preguntas sobre tus propios datos.
 
 ## ¿A quién le sirve?
 
 - **Analistas de marketing y community managers** que necesitan decidir en qué juegos invertir esfuerzo
-- **Publishers pequeños/medianos** que buscan dónde patrocinio streamers o lanzar contenido
+- **Publishers pequeños/medianos** que buscan dónde patrocinar streamers o lanzar contenido
 - **Cualquier persona** que quiera entender las tendencias de audiencia en Twitch sin pagar herramientas
 
 ## API utilizada
@@ -63,6 +63,8 @@ python ingesta.py --sintetico
 python ingesta.py
 ```
 
+> **Nota:** Ejecuta la ingesta una vez al día para acumular datos y construir la serie temporal.
+
 ### 4. Construir corpus para el chat RAG
 
 ```bash
@@ -72,7 +74,7 @@ python preparar_corpus.py
 ### 5. Lanzar la app
 
 ```bash
-streamlit run app.py
+python -m streamlit run app.py
 ```
 
 La app se abrirá en http://localhost:8501
@@ -95,8 +97,10 @@ Twitch Game Pulse/
 ├── ingesta.py                   # API Twitch → SQLite
 ├── preparar_corpus.py           # Fichas → ChromaDB
 ├── diccionario_datos.md         # Diccionario de datos
+├── storytelling.md              # Guion de presentación (15 min)
 ├── data/
-│   └── chroma/                  # ChromaDB persist (generado)
+│   ├── twitch_pulse.db          # Base de datos SQLite
+│   └── chroma/                  # ChromaDB persist
 ├── notebooks/
 │   └── eda.ipynb                # Análisis exploratorio
 └── app.py                       # Dashboard Streamlit
@@ -106,12 +110,27 @@ Twitch Game Pulse/
 
 | Pestaña | Descripción |
 |---------|-------------|
-| **Resumen** | KPIs: total viewers, juegos rastreados, juego top del día |
-| **Ranking** | Tabla sortable con todos los juegos ordenados por viewers |
-| **Tendencias** | Gráfico temporal de audiencia por juego, con filtros |
-| **En subida** | Top 10 juegos con mayor crecimiento % |
-| **Acerca del proyecto** | Descripción, tecnología, limitaciones |
-| **Chat** | Chat RAG que responde preguntas sobre tendencias usando tus datos |
+| **📊 Resumen** | KPIs: total viewers, juegos rastreados, streams activos, juego top. Gráfico top 10 + pie distribución |
+| **🏅 Ranking** | Tabla sortable con todos los juegos ordenados por viewers |
+| **📈 Tendencias** | Gráfico temporal de audiencia por juego, multiselect para comparar |
+| **🚀 En subida** | Top 10 juegos con mayor crecimiento % vs semana anterior |
+| **ℹ️ Acerca** | Descripción, tecnología, limitaciones, cómo ejecutar |
+| **💬 Chat** | Chat RAG que responde preguntas sobre tendencias usando tus datos |
+
+## Chat RAG — Pregúntale a tus datos
+
+El chat usa **Ollama** para generar respuestas basadas en tus propios datos:
+
+1. `preparar_corpus.py` genera fichas de tendencia por juego
+2. Las fichas se almacenan en **ChromaDB** con embeddings
+3. Al preguntar, ChromaDB recupera las fichas más relevantes
+4. Ollama genera una respuesta citando juego y fecha
+
+**Modelos utilizados:**
+- Embeddings: `embeddinggemma` (621 MB)
+- Generación: `qwen3.6:latest` (23 GB)
+
+**Ejemplo de pregunta:** "¿qué shooter tiene más audiencia?"
 
 ## Limitaciones importantes
 
@@ -123,15 +142,22 @@ Twitch Game Pulse/
 
 - **Python 3.14** — Lenguaje principal
 - **SQLite** — Almacenamiento local de snapshots
-- **Streamlit** — Dashboard interactivo
+- **Streamlit** — Dashboard interactivo con tema gaming
 - **Plotly** — Visualizaciones interactivas
 - **ChromaDB** — Base de datos vectorial para RAG
-- **Ollama** — LLM local (embeddinggemma + qwen) para el chat
+- **Ollama** — LLM local (embeddinggemma + qwen3.6)
 
-## Capturas
+## Datos actuales
 
-> *Pendiente: añadir screenshots de la app en funcionamiento*
+La base de datos contiene **180 juegos** rastreados con datos reales de Twitch (agosto 2026). La serie temporal crece con cada ejecución de `ingesta.py`.
+
+**Top 5 juegos por audiencia:**
+1. Just Chatting — 265K viewers
+2. Counter-Strike — 240K viewers
+3. Rust — 82K viewers
+4. League of Legends — 82K viewers
+5. VALORANT — 66K viewers
 
 ## Autor
 
-[Tu nombre] — Proyecto de verano 2026
+Álvaro — Proyecto de verano 2026
