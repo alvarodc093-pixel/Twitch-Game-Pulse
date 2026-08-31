@@ -446,24 +446,41 @@ def pestaña_chat():
 
 def generar_respuesta_rag(pregunta, k=3):
     if not os.path.exists(CHROMA_PATH):
-        return "⚠️ No hay corpus disponible. Ejecuta primero: `python preparar_corpus.py`"
+        return "No hay corpus. Ejecuta: python preparar_corpus.py"
     try:
         client = chromadb.PersistentClient(path=CHROMA_PATH)
         collection = client.get_collection("twitch_games")
         resultados = collection.query(query_texts=[pregunta], n_results=k)
         if not resultados["documents"] or not resultados["documents"][0]:
-            return "No encontré información relevante en los datos."
+            return "No encontre informacion relevante."
         docs = resultados["documents"][0]
-        contexto = " | ".join([d[:300] for d in docs])
+        respuesta = "**Resultados encontrados:**\n\n"
+        for i, doc in enumerate(docs[:k], 1):
+            lineas = doc.split("\n")
+            nombre = ""
+            viewers = ""
+            tendencia = ""
+            cambio = ""
+            for linea in lineas:
+                if "FICHA DE TENDENCIA" in linea:
+                    nombre = linea.replace("FICHA DE TENDENCIA", "").replace("—", "").strip()
+                elif "Viewers actuales" in linea:
+                    viewers = linea.split(":")[1].strip()
+                elif "Tendencia:" in linea:
+                    parts = linea.split(":")
+                    if len(parts) > 1:
+                        tendencia = parts[1].strip().split("(")[0].strip()
+                        if "(" in linea:
+                            cambio = linea.split("(")[1].replace(")", "").strip()
+            if nombre:
+                respuesta += f"**{i}. {nombre}**\n"
+                respuesta += f"   - Viewers: {viewers}\n"
+                if tendencia:
+                    respuesta += f"   - Tendencia: {tendencia} ({cambio})\n"
+                respuesta += "\n"
+        return respuesta
     except Exception as e:
-        return f"Error al consultar ChromaDB: {e}"
-    prompt = f"Segun estos datos de Twitch: {contexto}. Responde: {pregunta}"
-    try:
-        response = ollama.chat(model="qwen3.5:latest",
-            messages=[{"role": "user", "content": prompt}])
-        return response["message"]["content"]
-    except Exception as e:
-        return f"Error al conectar con Ollama: {e}"
+        return f"Error: {e}"
 
 
 def main():
