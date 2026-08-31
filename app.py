@@ -453,26 +453,17 @@ def generar_respuesta_rag(pregunta, k=3):
         resultados = collection.query(query_texts=[pregunta], n_results=k)
         if not resultados["documents"] or not resultados["documents"][0]:
             return "No encontré información relevante en los datos."
-        contexto = "\n\n".join(resultados["documents"][0])
+        docs = resultados["documents"][0]
+        contexto = " | ".join([d[:300] for d in docs])
     except Exception as e:
         return f"Error al consultar ChromaDB: {e}"
-    prompt = f"""Eres un analista de audiencia de Twitch. Responde preguntas sobre tendencias
-de videojuegos basándote ÚNICAMENTE en los datos proporcionados.
-Si los datos no son suficientes para responder, di que no hay información suficiente.
-Cita siempre las fuentes (nombre del juego y fecha) cuando sea posible.
-
-DATOS DISPONIBLES:
-{contexto}
-
-PREGUNTA: {pregunta}
-
-RESPUESTA (en español, concisa y basada en los datos):"""
+    prompt = f"Segun estos datos de Twitch: {contexto}. Responde: {pregunta}"
     try:
-        response = ollama.chat(model="qwen3.6:latest",
+        response = ollama.chat(model="qwen3.5:latest",
             messages=[{"role": "user", "content": prompt}])
         return response["message"]["content"]
     except Exception as e:
-        return f"Error al conectar con Ollama: {e}\n\nAsegúrate de que Ollama está ejecutándose: `ollama serve`"
+        return f"Error al conectar con Ollama: {e}"
 
 
 def main():
