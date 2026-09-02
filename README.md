@@ -128,7 +128,7 @@ El chat usa **Ollama** para generar respuestas basadas en tus propios datos:
 
 **Modelos utilizados:**
 - Embeddings: `embeddinggemma` (621 MB)
-- Generación: `qwen3.6:latest` (23 GB)
+- Generación: `qwen3.5:latest` (6.6 GB)
 
 **Ejemplo de pregunta:** "¿qué shooter tiene más audiencia?"
 
@@ -149,14 +149,16 @@ El chat usa **Ollama** para generar respuestas basadas en tus propios datos:
 
 ## Datos actuales
 
-La base de datos contiene **180 juegos** rastreados con datos reales de Twitch (agosto 2026). La serie temporal crece con cada ejecución de `ingesta.py`.
+La base de datos contiene **185 juegos** rastreados con datos reales de Twitch (septiembre 2026). La serie temporal crece con cada ejecución de `ingesta.py`.
 
-**Top 5 juegos por audiencia:**
-1. Just Chatting — 265K viewers
-2. Counter-Strike — 240K viewers
-3. Rust — 82K viewers
-4. League of Legends — 82K viewers
-5. VALORANT — 66K viewers
+**Top 5 videojuegos por audiencia:**
+1. GTA V — 136K viewers
+2. League of Legends — 95K viewers
+3. World of Warcraft — 90K viewers
+4. Counter-Strike — 77K viewers
+5. Fortnite — 67K viewers
+
+> **Nota:** La categoría más vista de Twitch es "Just Chatting" (570K viewers), pero no es un videojuego — es gente hablando de temas variados. Twitch Game Pulse se enfoca en **videojuegos reales**.
 
 ## Autor
 

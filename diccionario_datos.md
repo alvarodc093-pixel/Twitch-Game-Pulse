@@ -16,7 +16,7 @@
 |-------|------|-------------|--------|
 | `id` | INTEGER PK AUTO | Identificador único del snapshot | Generado por `ingesta.py` |
 | `juego_id` | INTEGER FK | Referencia al juego (`juegos.id`) | Twitch API: `/helix/streams` → `game_id` |
-| `timestamp` | TEXT NOT NULL | Fecha/hora UTC del snapshot (ISO 8601) | `ingesta.py`: `datetime.utcnow().isoformat()` |
+| `timestamp` | TEXT NOT NULL | Fecha/hora UTC del snapshot (ISO 8601) | `ingesta.py`: `datetime.now(timezone.utc).isoformat()` |
 | `viewers` | INTEGER NOT NULL | Total de espectadores en streams de ese juego | Agregado: `SUM(stream.viewer_count)` de `/helix/streams` |
 | `num_streams` | INTEGER NOT NULL | Número de streams activos para ese juego | `COUNT(*)` de `/helix/streams` |
 
