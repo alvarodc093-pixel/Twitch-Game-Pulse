@@ -98,14 +98,15 @@ def construir_corpus(db_path=DB_PATH, chroma_path=CHROMA_PATH):
         print("No hay datos suficientes. Ejecuta ingesta.py primero.")
         return
 
+    # Agrupar por juego_id para evitar duplicados
     juegos = {}
     for s in snapshots:
-        nombre = s["nombre"]
-        if nombre not in juegos:
-            juegos[nombre] = []
-        juegos[nombre].append(s)
+        juego_id = s["juego_id"]
+        if juego_id not in juegos:
+            juegos[juego_id] = {"nombre": s["nombre"], "snaps": []}
+        juegos[juego_id]["snaps"].append(s)
 
-    print(f"Juegos encontrados: {len(juegos)}")
+    print(f"Juegos únicos encontrados: {len(juegos)}")
 
     os.makedirs(chroma_path, exist_ok=True)
     client = chromadb.PersistentClient(path=chroma_path)
@@ -124,12 +125,14 @@ def construir_corpus(db_path=DB_PATH, chroma_path=CHROMA_PATH):
     ids = []
     metadatas = []
 
-    for nombre, snaps in juegos.items():
+    for juego_id, data in juegos.items():
+        nombre = data["nombre"]
+        snaps = data["snaps"]
         tendencia, cambio_pct = calcular_tendencia(snaps)
         ficha = generar_ficha(nombre, snaps, tendencia, cambio_pct)
 
         fichas.append(ficha)
-        ids.append(f"juego_{hash(nombre) % 100000}")
+        ids.append(f"juego_{juego_id}")
         metadatas.append({
             "nombre": nombre,
             "tendencia": tendencia,
