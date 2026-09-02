@@ -28,6 +28,25 @@ CATEGORIAS_NO_JUEGOS = [
     "Games + Demos", "Retro", "Education",
 ]
 
+GENROS_CONOCIDOS = {
+    "shooter": ["Counter-Strike", "VALORANT", "Apex Legends", "Call of Duty: Warzone",
+                "Call of Duty: Modern Warfare 4", "Overwatch", "Rainbow Six Siege",
+                "Fortnite", "PUBG: BATTLEGROUNDS", " Battlefield 6", "Delta Force",
+                "Hunt: Showdown 1896", "Escape from Tarkov", "Deadlock",
+                "Arena Breakout: Infinite", "Tom Clancy's The Division 2"],
+    "moba": ["League of Legends", "Dota 2", "Teamfight Tactics"],
+    "mmorpg": ["World of Warcraft", "FINAL FANTASY XIV ONLINE", "Albion Online",
+               "Black Desert", "Old School RuneScape", "Tibia", "Guildrun"],
+    "battle_royale": ["Fortnite", "PUBG: BATTLEGROUNDS", "Apex Legends", "Warzone"],
+    "racing": ["F1 25", "iRacing", "Trackmania", "Rocket League"],
+    "fighting": ["Street Fighter 6", "Mortal Shell II"],
+    "survival": ["Rust", "DayZ", "ARK: Survival Ascended", "Project Zomboid",
+                  "Once Human", "Palworld"],
+    "horror": ["Dead by Daylight", "Phasmophobia", "Outlast II", "RESIDENT EVIL: requiem"],
+    "strategy": ["Age of Empires II", "Heroes of Might and Magic III"],
+    "sports": ["NBA 2K27", "EA Sports FC 26"],
+}
+
 st.set_page_config(
     page_title="Twitch Game Pulse",
     page_icon="🎮",
@@ -471,18 +490,33 @@ def pestaña_chat():
         st.rerun()
 
 
+def detectar_genero(pregunta):
+    pregunta_lower = pregunta.lower()
+    for genero, juegos in GENROS_CONOCIDOS.items():
+        if genero.replace("_", " ") in pregunta_lower or genero in pregunta_lower:
+            return genero, juegos
+    return None, []
+
+
 def generar_respuesta_rag(pregunta, k=3):
     if not os.path.exists(CHROMA_PATH):
         return "No hay corpus. Ejecuta: python preparar_corpus.py"
+    genero, juegos_genero = detectar_genero(pregunta)
     try:
         client = chromadb.PersistentClient(path=CHROMA_PATH)
         collection = client.get_collection("twitch_games")
-        resultados = collection.query(query_texts=[pregunta], n_results=k)
+        if genero and juegos_genero:
+            resultados = collection.query(query_texts=[pregunta], n_results=k * 3)
+        else:
+            resultados = collection.query(query_texts=[pregunta], n_results=k)
         if not resultados["documents"] or not resultados["documents"][0]:
             return "No encontre informacion relevante."
         docs = resultados["documents"][0]
         respuesta = "**Resultados encontrados:**\n\n"
-        for i, doc in enumerate(docs[:k], 1):
+        count = 0
+        for doc in docs:
+            if count >= k:
+                break
             lineas = doc.split("\n")
             nombre = ""
             viewers = ""
@@ -499,12 +533,18 @@ def generar_respuesta_rag(pregunta, k=3):
                         tendencia = parts[1].strip().split("(")[0].strip()
                         if "(" in linea:
                             cambio = linea.split("(")[1].replace(")", "").strip()
+            if genero and juegos_genero:
+                if nombre not in juegos_genero:
+                    continue
             if nombre:
-                respuesta += f"**{i}. {nombre}**\n"
+                count += 1
+                respuesta += f"**{count}. {nombre}**\n"
                 respuesta += f"   - Viewers: {viewers}\n"
                 if tendencia:
                     respuesta += f"   - Tendencia: {tendencia} ({cambio})\n"
                 respuesta += "\n"
+        if count == 0:
+            return "No encontre juegos de ese genero en los datos."
         return respuesta
     except Exception as e:
         return f"Error: {e}"
