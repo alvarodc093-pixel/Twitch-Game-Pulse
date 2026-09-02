@@ -19,6 +19,15 @@ from datetime import datetime, timedelta, timezone
 DB_PATH = "data/twitch_pulse.db"
 CHROMA_PATH = "data/chroma"
 
+CATEGORIAS_NO_JUEGOS = [
+    "Just Chatting", "IRL", "Slots", "Sports", "Music", "Art",
+    "ASMR", "Crypto", "Talk Shows & Podcasts", "DJs", "Poker",
+    "Animals, Aquariums, and Zoos", "Co-working & Studying",
+    "Pools, Hot Tubs, and Beaches", "Politics", "Software and Game Development",
+    "Special Events", "Science & Technology", "Science Technology",
+    "Games + Demos", "Retro", "Education",
+]
+
 st.set_page_config(
     page_title="Twitch Game Pulse",
     page_icon="🎮",
@@ -189,6 +198,7 @@ def cargar_datos():
     df = pd.read_sql_query(query, conn)
     conn.close()
     if not df.empty:
+        df = df[~df["nombre"].isin(CATEGORIAS_NO_JUEGOS)]
         df["timestamp"] = pd.to_datetime(df["timestamp"], format="ISO8601", utc=True)
         df["fecha"] = df["timestamp"].dt.date
     return df
@@ -403,6 +413,8 @@ def pestaña_acerca():
     - Cualquier persona que necesite decidir en qué juegos invertir esfuerzo
 
     **API utilizada:** [Twitch Helix API](https://dev.twitch.tv/helix/docs)
+
+    **Categorías excluidas:** Just Chatting, IRL, Slots, Sports, Music, Art y otras que no son videojuegos.
 
     **Limitaciones:**
     - Sin histórico retroactivo — la serie temporal empieza desde la primera ejecución
