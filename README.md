@@ -18,7 +18,7 @@ Hoy es difícil saber, sin herramientas de pago (SullyGnome, StreamElements Anal
 
 ## API utilizada
 
-[Twitch Helix API](https://dev.twitch.tv/helix/docs) — Gratuita, requiere registro de app en dev.twitch.tv y autenticación OAuth (Client Credentials).
+[Twitch Helix API](https://dev.twitch.tv/docs/api/reference/) — Gratuita, requiere registro de app en dev.twitch.tv y autenticación OAuth (Client Credentials).
 
 **Endpoints utilizados:**
 - `POST /oauth2/token` — Obtención de App Access Token
