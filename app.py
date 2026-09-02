@@ -507,18 +507,20 @@ def generar_respuesta_rag(pregunta, k=3):
         collection = client.get_collection("twitch_games")
         if genero and juegos_genero:
             conn = sqlite3.connect(DB_PATH)
+            cur = conn.cursor()
+            cur.execute("SELECT DATE(MAX(timestamp)) FROM snapshots_audiencia")
+            fecha_max = cur.fetchone()[0]
             placeholders = ",".join(["?" for _ in juegos_genero])
             query = f'''
                 SELECT j.nombre, s.viewers, s.num_streams
                 FROM snapshots_audiencia s
                 JOIN juegos j ON j.id = s.juego_id
                 WHERE j.nombre IN ({placeholders})
-                AND s.timestamp = (SELECT MAX(timestamp) FROM snapshots_audiencia)
+                AND DATE(s.timestamp) = ?
                 ORDER BY s.viewers DESC
                 LIMIT ?
             '''
-            cur = conn.cursor()
-            cur.execute(query, juegos_genero + [k])
+            cur.execute(query, juegos_genero + [fecha_max, k])
             rows = cur.fetchall()
             conn.close()
             if not rows:
