@@ -234,9 +234,24 @@ def calcular_crecimiento(df, dias=7):
 
 def header():
     st.markdown("""
-    <div class="main-header">
-        <h1>🎮 Twitch Game Pulse</h1>
-        <p>Radar de audiencia de videojuegos en Twitch — Detecta tendencias antes que nadie</p>
+    <div style="position: relative; border-radius: 16px; overflow: hidden; margin-bottom: 2rem;
+                box-shadow: 0 8px 32px rgba(145, 70, 255, 0.3);">
+        <img src="https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1200&q=80"
+             style="width: 100%; height: 250px; object-fit: cover; filter: brightness(0.4);">
+        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+                    background: linear-gradient(135deg, rgba(145,70,255,0.85) 0%, rgba(123,47,204,0.7) 50%, rgba(145,70,255,0.6) 100%);
+                    display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2rem;">
+            <h1 style="color: white; font-family: 'Inter', sans-serif; font-weight: 700;
+                       font-size: 2.5rem; margin: 0; text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+                       letter-spacing: -0.5px;">
+                🎮 Twitch Game Pulse
+            </h1>
+            <p style="color: rgba(255,255,255,0.9); font-family: 'Inter', sans-serif;
+                      font-size: 1.15rem; margin: 0.5rem 0 0 0; font-weight: 400;
+                      text-shadow: 0 1px 4px rgba(0,0,0,0.4);">
+                Radar de audiencia de videojuegos en Twitch — Detecta tendencias antes que nadie
+            </p>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
