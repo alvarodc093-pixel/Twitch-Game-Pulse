@@ -463,7 +463,7 @@ def pestaña_acerca():
     - {get_text(lang, "acerca_user2")}
     - {get_text(lang, "acerca_user3")}
 
-    **{get_text(lang, "acerca_api"):** [Twitch Helix API](https://dev.twitch.tv/helix/docs)
+    **{get_text(lang, "acerca_api")}** [Twitch Helix API](https://dev.twitch.tv/helix/docs)
 
     **{get_text(lang, "acerca_limitaciones")}**
     - {get_text(lang, "acerca_lim1")}
