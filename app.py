@@ -254,11 +254,21 @@ def calcular_crecimiento(df, dias=7):
 
 def header():
     lang = st.session_state.get("lang", "es")
+    col_logo, col_lang = st.columns([5, 1])
+    with col_lang:
+        lang_options = list(LANGUAGES.keys())
+        lang_labels = [LANGUAGES[l] for l in lang_options]
+        idx = lang_options.index(lang) if lang in lang_options else 0
+        selected = st.selectbox("🌐 Idioma", lang_labels, index=idx, key="lang_select")
+        new_lang = lang_options[lang_labels.index(selected)]
+        if new_lang != lang:
+            st.session_state["lang"] = new_lang
+            st.rerun()
     st.markdown(f"""
     <div style="position: relative; border-radius: 16px; overflow: hidden; margin-bottom: 2rem;
                 box-shadow: 0 8px 32px rgba(145, 70, 255, 0.3);">
         <img src="https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1200&q=80"
-             style="width: 100%; height: 250px; object-fit: cover; filter: brightness(0.4);">
+             style="width: 100%; height: 200px; object-fit: cover; filter: brightness(0.4);">
         <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0;
                     background: linear-gradient(135deg, rgba(145,70,255,0.85) 0%, rgba(123,47,204,0.7) 50%, rgba(145,70,255,0.6) 100%);
                     display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2rem;">
@@ -280,16 +290,6 @@ def header():
 def sidebar_filtros(df):
     lang = st.session_state.get("lang", "es")
     with st.sidebar:
-        col1, col2 = st.columns([3, 1])
-        with col2:
-            lang_options = list(LANGUAGES.keys())
-            lang_labels = [LANGUAGES[l] for l in lang_options]
-            idx = lang_options.index(lang) if lang in lang_options else 0
-            selected = st.selectbox("🌐", lang_labels, index=idx, key="lang_select", label_visibility="collapsed")
-            new_lang = lang_options[lang_labels.index(selected)]
-            if new_lang != lang:
-                st.session_state["lang"] = new_lang
-                st.rerun()
         st.markdown(f"""
         <div style="text-align:center; padding: 1rem 0;">
             <span style="font-size: 2.5rem;">🎮</span>
