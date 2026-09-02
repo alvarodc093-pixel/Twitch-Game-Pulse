@@ -151,16 +151,16 @@ El chat usa **Ollama** para generar respuestas basadas en tus propios datos:
 
 ## Datos actuales
 
-La base de datos contiene **185 juegos** rastreados con datos reales de Twitch (septiembre 2026). La serie temporal crece con cada ejecución de `ingesta.py`.
+La base de datos contiene **218 videojuegos** rastreados con datos reales de Twitch (septiembre 2026). La serie temporal crece con cada ejecución de `ingesta.py`.
 
-**Top 5 videojuegos por audiencia:**
-1. GTA V — 136K viewers
-2. League of Legends — 95K viewers
-3. World of Warcraft — 90K viewers
-4. Counter-Strike — 77K viewers
-5. Fortnite — 67K viewers
+**Top 5 videojuegos por audiencia (última ingesta 02/09/2026):**
+1. GTA V — 130K viewers
+2. Minecraft — 121K viewers
+3. League of Legends — 110K viewers
+4. World of Warcraft — 108K viewers
+5. Counter-Strike — 90K viewers
 
-> **Nota:** La categoría más vista de Twitch es "Just Chatting" (570K viewers), pero no es un videojuego — es gente hablando de temas variados. Twitch Game Pulse se enfoca en **videojuegos reales**.
+> **Nota:** La categoría más vista de Twitch es "Just Chatting" (562K viewers), pero no es un videojuego — es gente hablando de temas variados. Twitch Game Pulse se enfoca en **videojuegos reales**.
 
 ## Autor
 
