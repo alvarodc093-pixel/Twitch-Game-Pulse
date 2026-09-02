@@ -505,52 +505,49 @@ def generar_respuesta_rag(pregunta, k=3):
     try:
         client = chromadb.PersistentClient(path=CHROMA_PATH)
         collection = client.get_collection("twitch_games")
-        resultados = collection.query(query_texts=[pregunta], n_results=k * 5)
-        if not resultados["documents"] or not resultados["documents"][0]:
-            return "No encontre informacion relevante."
-        docs = resultados["documents"][0]
-        juegos_encontrados = []
-        for doc in docs:
-            lineas = doc.split("\n")
-            nombre = ""
-            viewers = 0
-            tendencia = ""
-            cambio = ""
-            for linea in lineas:
-                if "FICHA DE TENDENCIA" in linea:
-                    nombre = linea.replace("FICHA DE TENDENCIA", "").replace("—", "").strip()
-                elif "Viewers actuales" in linea:
-                    try:
-                        viewers = int(linea.split(":")[1].strip().replace(",", ""))
-                    except:
-                        viewers = 0
-                elif "Tendencia:" in linea:
-                    parts = linea.split(":")
-                    if len(parts) > 1:
-                        tendencia = parts[1].strip().split("(")[0].strip()
-                        if "(" in linea:
-                            cambio = linea.split("(")[1].replace(")", "").strip()
-            if genero and juegos_genero:
-                if nombre not in juegos_genero:
-                    continue
-            if nombre:
-                juegos_encontrados.append({
-                    "nombre": nombre,
-                    "viewers": viewers,
-                    "tendencia": tendencia,
-                    "cambio": cambio
-                })
-        if not juegos_encontrados:
-            return "No encontre juegos de ese genero en los datos."
-        juegos_encontrados.sort(key=lambda x: x["viewers"], reverse=True)
-        respuesta = "**Resultados encontrados:**\n\n"
-        for i, j in enumerate(juegos_encontrados[:k], 1):
-            respuesta += f"**{i}. {j['nombre']}**\n"
-            respuesta += f"   - Viewers: {j['viewers']:,}\n"
-            if j['tendencia']:
-                respuesta += f"   - Tendencia: {j['tendencia']} ({j['cambio']})\n"
-            respuesta += "\n"
-        return respuesta
+        if genero and juegos_genero:
+            conn = sqlite3.connect(DB_PATH)
+            placeholders = ",".join(["?" for _ in juegos_genero])
+            query = f'''
+                SELECT j.nombre, s.viewers, s.num_streams
+                FROM snapshots_audiencia s
+                JOIN juegos j ON j.id = s.juego_id
+                WHERE j.nombre IN ({placeholders})
+                AND s.timestamp = (SELECT MAX(timestamp) FROM snapshots_audiencia)
+                ORDER BY s.viewers DESC
+                LIMIT ?
+            '''
+            cur = conn.cursor()
+            cur.execute(query, juegos_genero + [k])
+            rows = cur.fetchall()
+            conn.close()
+            if not rows:
+                return "No encontre juegos de ese genero en los datos."
+            respuesta = "**Resultados encontrados:**\n\n"
+            for i, (nombre, viewers, streams) in enumerate(rows, 1):
+                respuesta += f"**{i}. {nombre}**\n"
+                respuesta += f"   - Viewers: {viewers:,}\n"
+                respuesta += f"   - Streams: {streams:,}\n\n"
+            return respuesta
+        else:
+            resultados = collection.query(query_texts=[pregunta], n_results=k)
+            if not resultados["documents"] or not resultados["documents"][0]:
+                return "No encontre informacion relevante."
+            docs = resultados["documents"][0]
+            respuesta = "**Resultados encontrados:**\n\n"
+            for i, doc in enumerate(docs[:k], 1):
+                lineas = doc.split("\n")
+                nombre = ""
+                viewers = ""
+                for linea in lineas:
+                    if "FICHA DE TENDENCIA" in linea:
+                        nombre = linea.replace("FICHA DE TENDENCIA", "").replace("—", "").strip()
+                    elif "Viewers actuales" in linea:
+                        viewers = linea.split(":")[1].strip()
+                if nombre:
+                    respuesta += f"**{i}. {nombre}**\n"
+                    respuesta += f"   - Viewers: {viewers}\n\n"
+            return respuesta
     except Exception as e:
         return f"Error: {e}"
 
