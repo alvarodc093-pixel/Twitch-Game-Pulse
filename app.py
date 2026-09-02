@@ -631,12 +631,13 @@ def generar_respuesta_rag(pregunta, k=3):
             fecha_max = cur.fetchone()[0]
             placeholders = ",".join(["?" for _ in juegos_genero])
             query = f'''
-                SELECT j.nombre, s.viewers, s.num_streams
+                SELECT j.nombre, MAX(s.viewers) as viewers, MAX(s.num_streams) as num_streams
                 FROM snapshots_audiencia s
                 JOIN juegos j ON j.id = s.juego_id
                 WHERE j.nombre IN ({placeholders})
                 AND DATE(s.timestamp) = ?
-                ORDER BY s.viewers DESC
+                GROUP BY j.nombre
+                ORDER BY viewers DESC
                 LIMIT ?
             '''
             cur.execute(query, juegos_genero + [fecha_max, k])
