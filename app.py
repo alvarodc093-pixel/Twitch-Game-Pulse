@@ -445,6 +445,109 @@ def pestaña_en_subida(df):
     st.plotly_chart(fig, use_container_width=True)
 
 
+def pestaña_eda(df):
+    lang = st.session_state.get("lang", "es")
+    st.markdown("### 📊 " + get_text(lang, "eda_title"))
+    if df.empty:
+        st.warning(get_text(lang, "no_data"))
+        return
+
+    ultimo = obtener_ultimo_snapshot(df)
+    total_viewers = ultimo["viewers"].sum()
+    top5_viewers = ultimo.head(5)["viewers"].sum()
+    top5_pct = top5_viewers / total_viewers * 100
+
+    # Sección 1: Ranking de audiencia
+    st.markdown("#### 1. Ranking de audiencia — ¿Quién gana la atención?")
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        top10 = ultimo.head(10)
+        fig = px.bar(top10, x="nombre", y="viewers", color="viewers",
+            color_continuous_scale="viridis",
+            labels={"nombre": get_text(lang, "col_juego"), "viewers": get_text(lang, "col_viewers")})
+        fig.update_layout(xaxis_tickangle=-45, showlegend=False, paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#EFEFEF"))
+        st.plotly_chart(fig, use_container_width=True)
+    with col2:
+        st.markdown(f"**Top 5 concentran {top5_pct:.1f}%** de la audiencia")
+        top5 = ultimo.head(5)
+        fig_pie = px.pie(top5, values="viewers", names="nombre",
+            color_discrete_sequence=["#9146FF", "#BF94FF", "#7B2FCC", "#448AFF", "#00C853"])
+        fig_pie.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#EFEFEF"), showlegend=False)
+        fig_pie.update_traces(textposition="inside", textinfo="percent+label")
+        st.plotly_chart(fig_pie, use_container_width=True)
+    st.markdown("---")
+
+    # Sección 2: Evolución temporal
+    st.markdown("#### 2. Evolución temporal — Top 5")
+    top5_nombres = ultimo.head(5)["nombre"].tolist()
+    df_top5 = df[df["nombre"].isin(top5_nombres)]
+    diario = df_top5.groupby(["fecha", "nombre"])["viewers"].mean().reset_index()
+    diario["fecha"] = pd.to_datetime(diario["fecha"])
+    fig_line = px.line(diario, x="fecha", y="viewers", color="nombre",
+        title="Evolución diaria de audiencia",
+        labels={"fecha": "Fecha", "viewers": get_text(lang, "col_viewers"), "nombre": get_text(lang, "col_juego")},
+        markers=True)
+    fig_line.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#EFEFEF"), legend_title_text=get_text(lang, "col_juego"))
+    st.plotly_chart(fig_line, use_container_width=True)
+    st.markdown("---")
+
+    # Sección 3: Crecimiento
+    st.markdown("#### 3. Crecimiento — ¿Quién gana audiencia?")
+    crecimiento = calcular_crecimiento(df, dias=7)
+    if not crecimiento.empty:
+        top_crec = crecimiento[crecimiento["viewers_anterior"] > 100].head(10)
+        if not top_crec.empty:
+            fig_crec = px.bar(top_crec.sort_values("crecimiento_pct", ascending=True),
+                x="crecimiento_pct", y="nombre", orientation="h",
+                color="crecimiento_pct", color_continuous_scale="RdYlGn",
+                labels={"nombre": get_text(lang, "col_juego"), "crecimiento_pct": "Crecimiento (%)"})
+            fig_crec.update_layout(showlegend=False, paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#EFEFEF"),
+                yaxis=dict(autorange="reversed"))
+            st.plotly_chart(fig_crec, use_container_width=True)
+    st.markdown("---")
+
+    # Sección 4: Variabilidad
+    st.markdown("#### 4. Variabilidad — ¿Todos se comportan igual?")
+    stats = df.groupby("nombre")["viewers"].agg(["mean", "std", "max", "min", "count"]).reset_index()
+    stats.columns = ["nombre", "media", "desv_est", "maximo", "minimo", "count"]
+    stats["cv"] = stats["desv_est"] / stats["media"] * 100
+    stats = stats[stats["count"] >= 5].sort_values("cv", ascending=False)
+    if not stats.empty:
+        fig_var = px.scatter(stats, x="media", y="cv", size="maximo", hover_name="nombre",
+            title="Variabilidad vs Audiencia media",
+            labels={"media": "Audiencia media", "cv": "Coef. variación (%)"})
+        fig_var.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="#EFEFEF"))
+        st.plotly_chart(fig_var, use_container_width=True)
+    st.markdown("---")
+
+    # Sección 5: Eficiencia
+    st.markdown("#### 5. Viewers por stream (eficiencia)")
+    ultimo_vps = ultimo.copy()
+    ultimo_vps["vps"] = ultimo_vps["viewers"] / ultimo_vps["num_streams"]
+    top_vps = ultimo_vps.sort_values("vps", ascending=False).head(10)
+    fig_vps = px.bar(top_vps.sort_values("vps", ascending=True), x="vps", y="nombre", orientation="h",
+        color="vps", color_continuous_scale="plasma",
+        labels={"nombre": get_text(lang, "col_juego"), "vps": "Viewers / Stream"})
+    fig_vps.update_layout(showlegend=False, paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#EFEFEF"))
+    st.plotly_chart(fig_vps, use_container_width=True)
+
+    # Síntesis
+    st.markdown("---")
+    st.markdown("#### Síntesis — Las tres perspectivas")
+    st.markdown("""
+    | Perspectiva | Qué mide | Ejemplo |
+    |---|---|---|
+    | **Volumen** | Cuánta audiencia tiene | GTA V: 129.510 viewers |
+    | **Evolución** | Si crece o decrece | WoW: +1.077% vs semana anterior |
+    | **Variabilidad** | Si es estable | Rust: CV 140.9% (muy inestable) |
+    """)
+
+
 def pestaña_acerca():
     lang = st.session_state.get("lang", "es")
     st.markdown("### " + get_text(lang, "acerca_title"))
@@ -577,13 +680,15 @@ def main():
     header()
     df = cargar_datos()
     fecha_inicio, fecha_fin = sidebar_filtros(df)
-    tab_resumen, tab_ranking, tab_tendencias, tab_subida, tab_acerca, tab_chat = st.tabs([
-        get_text(lang, "tab_resumen"), get_text(lang, "tab_ranking"),
-        get_text(lang, "tab_tendencias"), get_text(lang, "tab_subida"),
-        get_text(lang, "tab_acerca"), get_text(lang, "tab_chat"),
+    tab_resumen, tab_eda, tab_ranking, tab_tendencias, tab_subida, tab_acerca, tab_chat = st.tabs([
+        get_text(lang, "tab_resumen"), get_text(lang, "tab_eda"),
+        get_text(lang, "tab_ranking"), get_text(lang, "tab_tendencias"),
+        get_text(lang, "tab_subida"), get_text(lang, "tab_acerca"), get_text(lang, "tab_chat"),
     ])
     with tab_resumen:
         pestaña_resumen(df)
+    with tab_eda:
+        pestaña_eda(df)
     with tab_ranking:
         pestaña_ranking(df, fecha_inicio, fecha_fin)
     with tab_tendencias:
