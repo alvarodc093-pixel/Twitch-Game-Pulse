@@ -15,6 +15,7 @@ import os
 import chromadb
 import ollama
 from datetime import datetime, timedelta, timezone
+from translations import LANGUAGES, get_text
 
 DB_PATH = "data/twitch_pulse.db"
 CHROMA_PATH = "data/chroma"
@@ -252,7 +253,8 @@ def calcular_crecimiento(df, dias=7):
 
 
 def header():
-    st.markdown("""
+    lang = st.session_state.get("lang", "es")
+    st.markdown(f"""
     <div style="position: relative; border-radius: 16px; overflow: hidden; margin-bottom: 2rem;
                 box-shadow: 0 8px 32px rgba(145, 70, 255, 0.3);">
         <img src="https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1200&q=80"
@@ -263,12 +265,12 @@ def header():
             <h1 style="color: white; font-family: 'Inter', sans-serif; font-weight: 700;
                        font-size: 2.5rem; margin: 0; text-shadow: 0 2px 12px rgba(0,0,0,0.5);
                        letter-spacing: -0.5px;">
-                🎮 Twitch Game Pulse
+                {get_text(lang, "header_title")}
             </h1>
             <p style="color: rgba(255,255,255,0.9); font-family: 'Inter', sans-serif;
                       font-size: 1.15rem; margin: 0.5rem 0 0 0; font-weight: 400;
                       text-shadow: 0 1px 4px rgba(0,0,0,0.4);">
-                Radar de audiencia de videojuegos en Twitch — Detecta tendencias antes que nadie
+                {get_text(lang, "header_sub")}
             </p>
         </div>
     </div>
@@ -276,12 +278,23 @@ def header():
 
 
 def sidebar_filtros(df):
+    lang = st.session_state.get("lang", "es")
     with st.sidebar:
-        st.markdown("""
+        col1, col2 = st.columns([3, 1])
+        with col2:
+            lang_options = list(LANGUAGES.keys())
+            lang_labels = [LANGUAGES[l] for l in lang_options]
+            idx = lang_options.index(lang) if lang in lang_options else 0
+            selected = st.selectbox("🌐", lang_labels, index=idx, key="lang_select", label_visibility="collapsed")
+            new_lang = lang_options[lang_labels.index(selected)]
+            if new_lang != lang:
+                st.session_state["lang"] = new_lang
+                st.rerun()
+        st.markdown(f"""
         <div style="text-align:center; padding: 1rem 0;">
             <span style="font-size: 2.5rem;">🎮</span>
             <h2 style="color: #BF94FF; margin-top: 0.5rem; font-family: Inter, sans-serif;">Game Pulse</h2>
-            <p style="color: #ADADB8; font-size: 0.85rem;">Filtros de datos</p>
+            <p style="color: #ADADB8; font-size: 0.85rem;">{get_text(lang, "sidebar_filtros")}</p>
         </div>
         """, unsafe_allow_html=True)
         st.markdown("---")
@@ -289,7 +302,7 @@ def sidebar_filtros(df):
             min_date = df["fecha"].min()
             max_date = df["fecha"].max()
             fecha_inicio, fecha_fin = st.date_input(
-                "📅 Rango de fechas", value=(min_date, max_date),
+                get_text(lang, "sidebar_fecha"), value=(min_date, max_date),
                 min_value=min_date, max_value=max_date,
             )
         else:
@@ -298,7 +311,7 @@ def sidebar_filtros(df):
         st.markdown(f"""
         <div style="background: rgba(145,70,255,0.1); border: 1px solid rgba(145,70,255,0.3);
                     border-radius: 8px; padding: 0.8rem; text-align: center;">
-            <p style="color: #ADADB8; font-size: 0.8rem; margin: 0;">Última actualización</p>
+            <p style="color: #ADADB8; font-size: 0.8rem; margin: 0;">{get_text(lang, "sidebar_ultima")}</p>
             <p style="color: #BF94FF; font-size: 0.95rem; margin: 0.2rem 0 0 0; font-weight: 600;">
                 {datetime.now(timezone.utc).strftime('%d/%m/%Y %H:%M')} UTC
             </p>
@@ -308,8 +321,9 @@ def sidebar_filtros(df):
 
 
 def pestaña_resumen(df):
+    lang = st.session_state.get("lang", "es")
     if df.empty:
-        st.warning("⚠️ No hay datos disponibles. Ejecuta primero: `python ingesta.py`")
+        st.warning(get_text(lang, "no_data"))
         return
     ultimo = obtener_ultimo_snapshot(df)
     total_viewers = ultimo["viewers"].sum()
@@ -319,24 +333,24 @@ def pestaña_resumen(df):
 
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("👁️ Viewers activos", f"{total_viewers:,.0f}")
+        st.metric(get_text(lang, "kpi_viewers"), f"{total_viewers:,.0f}")
     with col2:
-        st.metric("🎮 Juegos rastreados", total_juegos)
+        st.metric(get_text(lang, "kpi_juegos"), total_juegos)
     with col3:
-        st.metric("📡 Streams activos", f"{total_streams:,.0f}")
+        st.metric(get_text(lang, "kpi_streams"), f"{total_streams:,.0f}")
     with col4:
         if juego_top is not None:
-            st.metric("🏆 Juego top", juego_top["nombre"], f"{juego_top['viewers']:,} viewers")
+            st.metric(get_text(lang, "kpi_top"), juego_top["nombre"], f"{juego_top['viewers']:,} viewers")
 
     st.markdown("---")
     col_izq, col_der = st.columns([2, 1])
 
     with col_izq:
-        st.markdown("### 📊 Top 10 juegos por viewers")
+        st.markdown("### " + get_text(lang, "top10_title"))
         top10 = ultimo.head(10)
         fig = px.bar(top10, x="nombre", y="viewers", color="viewers",
             color_continuous_scale=[[0, "#231D30"], [0.5, "#7B2FCC"], [1, "#BF94FF"]],
-            labels={"nombre": "Juego", "viewers": "Viewers"})
+            labels={"nombre": get_text(lang, "col_juego"), "viewers": get_text(lang, "col_viewers")})
         fig.update_layout(xaxis_tickangle=-45, showlegend=False,
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
             font=dict(color="#EFEFEF"),
@@ -345,7 +359,7 @@ def pestaña_resumen(df):
         st.plotly_chart(fig, use_container_width=True)
 
     with col_der:
-        st.markdown("### 🎯 Distribución top 5")
+        st.markdown("### " + get_text(lang, "pie_title"))
         top5 = ultimo.head(5).copy()
         fig_pie = px.pie(top5, values="viewers", names="nombre",
             color_discrete_sequence=["#9146FF", "#BF94FF", "#7B2FCC", "#448AFF", "#00C853"])
@@ -356,9 +370,10 @@ def pestaña_resumen(df):
 
 
 def pestaña_ranking(df, fecha_inicio, fecha_fin):
-    st.markdown("### 🏅 Ranking de juegos")
+    lang = st.session_state.get("lang", "es")
+    st.markdown("### " + get_text(lang, "ranking_title"))
     if df.empty:
-        st.warning("⚠️ No hay datos disponibles.")
+        st.warning(get_text(lang, "no_data"))
         return
     if fecha_inicio and fecha_fin:
         df_filtrado = df[(df["fecha"] >= fecha_inicio) & (df["fecha"] <= fecha_fin)]
@@ -366,8 +381,9 @@ def pestaña_ranking(df, fecha_inicio, fecha_fin):
         df_filtrado = df
     ultimo = obtener_ultimo_snapshot(df_filtrado)
     mostrar = ultimo[["nombre", "viewers", "num_streams", "timestamp"]].copy()
-    mostrar.columns = ["Juego", "Viewers", "Streams", "Última actualización"]
-    mostrar["Última actualización"] = mostrar["Última actualización"].dt.strftime("%d/%m/%Y %H:%M")
+    mostrar.columns = [get_text(lang, "col_juego"), get_text(lang, "col_viewers"),
+                       get_text(lang, "col_streams"), get_text(lang, "col_fecha")]
+    mostrar[get_text(lang, "col_fecha")] = mostrar[get_text(lang, "col_fecha")].dt.strftime("%d/%m/%Y %H:%M")
     mostrar = mostrar.reset_index(drop=True)
     mostrar.index = mostrar.index + 1
     mostrar.index.name = "#"
@@ -375,86 +391,85 @@ def pestaña_ranking(df, fecha_inicio, fecha_fin):
 
 
 def pestaña_tendencias(df, fecha_inicio, fecha_fin):
-    st.markdown("### 📈 Tendencias de audiencia")
+    lang = st.session_state.get("lang", "es")
+    st.markdown("### " + get_text(lang, "tendencias_title"))
     if df.empty:
-        st.warning("⚠️ No hay datos disponibles.")
+        st.warning(get_text(lang, "no_data"))
         return
     nombres_juegos = sorted(df["nombre"].unique())
-    juegos_seleccionados = st.multiselect("Selecciona juegos para comparar",
+    juegos_seleccionados = st.multiselect(get_text(lang, "tendencias_select"),
         nombres_juegos, default=nombres_juegos[:3] if len(nombres_juegos) >= 3 else nombres_juegos)
     if not juegos_seleccionados:
-        st.info("Selecciona al menos un juego para ver su tendencia.")
+        st.info("Selecciona al menos un juego / Select at least one game")
         return
     df_filtrado = df[df["nombre"].isin(juegos_seleccionados)]
     if fecha_inicio and fecha_fin:
         df_filtrado = df_filtrado[(df_filtrado["fecha"] >= fecha_inicio) & (df_filtrado["fecha"] <= fecha_fin)]
     df_diario = df_filtrado.groupby(["fecha", "nombre"])["viewers"].mean().reset_index()
     fig = px.line(df_diario, x="fecha", y="viewers", color="nombre",
-        labels={"fecha": "Fecha", "viewers": "Viewers (media)", "nombre": "Juego"}, markers=True)
-    fig.update_layout(legend_title_text="Juego", paper_bgcolor="rgba(0,0,0,0)",
+        labels={"fecha": "Fecha", "viewers": get_text(lang, "col_viewers"), "nombre": get_text(lang, "col_juego")}, markers=True)
+    fig.update_layout(legend_title_text=get_text(lang, "col_juego"), paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#EFEFEF"),
         xaxis=dict(gridcolor="rgba(145,70,255,0.1)"), yaxis=dict(gridcolor="rgba(145,70,255,0.1)"))
     st.plotly_chart(fig, use_container_width=True)
-    st.markdown("### 📋 Detalle diario")
+    st.markdown("### " + get_text(lang, "tendencias_detalle"))
     tabla_detalle = df_filtrado.pivot_table(index="fecha", columns="nombre",
         values="viewers", aggfunc="mean").fillna(0).astype(int)
     st.dataframe(tabla_detalle, use_container_width=True)
 
 
 def pestaña_en_subida(df):
-    st.markdown("### 🚀 Juegos en subida")
+    lang = st.session_state.get("lang", "es")
+    st.markdown("### " + get_text(lang, "subida_title"))
     if df.empty:
-        st.warning("⚠️ No hay datos disponibles.")
+        st.warning(get_text(lang, "no_data"))
         return
     crecimiento = calcular_crecimiento(df, dias=7)
     if crecimiento.empty:
-        st.info("No hay suficientes datos para calcular crecimiento.")
+        st.info("No hay suficientes datos / Not enough data")
         return
-    st.markdown("#### Top 10 mayor crecimiento (%) — última semana vs anterior")
+    st.markdown("#### " + get_text(lang, "subida_top"))
     top_crecimiento = crecimiento.head(10)
     mostrar = top_crecimiento[["nombre", "viewers_actual", "viewers_anterior", "crecimiento_pct"]].copy()
-    mostrar.columns = ["Juego", "Viewers (esta semana)", "Viewers (semana anterior)", "Crecimiento %"]
-    mostrar["Crecimiento %"] = mostrar["Crecimiento %"].apply(lambda x: f"{x:+.1f}%")
+    mostrar.columns = [get_text(lang, "col_juego2"), get_text(lang, "col_viewers_actual"),
+                       get_text(lang, "col_viewers_anterior"), get_text(lang, "col_crecimiento")]
+    mostrar[get_text(lang, "col_crecimiento")] = mostrar[get_text(lang, "col_crecimiento")].apply(lambda x: f"{x:+.1f}%")
     mostrar = mostrar.reset_index(drop=True)
     mostrar.index = mostrar.index + 1
     mostrar.index.name = "#"
     st.dataframe(mostrar, use_container_width=True)
     fig = px.bar(top_crecimiento, x="nombre", y="crecimiento_pct", color="crecimiento_pct",
-        color_continuous_scale="RdYlGn", labels={"nombre": "Juego", "crecimiento_pct": "Crecimiento %"})
+        color_continuous_scale="RdYlGn", labels={"nombre": get_text(lang, "col_juego2"), "crecimiento_pct": get_text(lang, "col_crecimiento")})
     fig.update_layout(xaxis_tickangle=-45, showlegend=False, paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#EFEFEF"))
     st.plotly_chart(fig, use_container_width=True)
 
 
 def pestaña_acerca():
-    st.markdown("### ℹ️ Acerca del proyecto")
-    st.markdown("""
+    lang = st.session_state.get("lang", "es")
+    st.markdown("### " + get_text(lang, "acerca_title"))
+    st.markdown(f"""
     <div style="background: linear-gradient(135deg, #231D30 0%, #2A2240 100%);
                 border: 1px solid rgba(145,70,255,0.25); border-radius: 12px;
                 padding: 1.5rem; margin-bottom: 1rem;">
         <h3 style="color: #BF94FF; margin-top: 0;">🎮 Twitch Game Pulse</h3>
-        <p style="color: #EFEFEF;"><strong>Radar de audiencia de videojuegos en Twitch</strong></p>
-        <p style="color: #ADADB8;">Hoy es difícil saber, sin herramientas de pago (SullyGnome, StreamElements Analytics),
-        qué juegos están creciendo o cayendo en audiencia de Twitch. Detectar ese movimiento a tiempo
-        es lo que usa la industria para decidir dónde invertir en marketing, patrocinio de streamers
-        o lanzamiento de contenido.</p>
+        <p style="color: #EFEFEF;"><strong>{get_text(lang, "acerca_desc")}</strong></p>
+        <p style="color: #ADADB8;">{get_text(lang, "acerca_problema")}</p>
     </div>
     """, unsafe_allow_html=True)
-    st.markdown("""
-    **¿A quién le sirve?**
-    - Analistas de marketing y community managers
-    - Publishers pequeños/medianos
-    - Cualquier persona que necesite decidir en qué juegos invertir esfuerzo
+    st.markdown(f"""
+    **{get_text(lang, "acerca_quien")}**
+    - {get_text(lang, "acerca_user1")}
+    - {get_text(lang, "acerca_user2")}
+    - {get_text(lang, "acerca_user3")}
 
-    **API utilizada:** [Twitch Helix API](https://dev.twitch.tv/helix/docs)
+    **{get_text(lang, "acerca_api"):** [Twitch Helix API](https://dev.twitch.tv/helix/docs)
 
-    **Categorías excluidas:** Just Chatting, IRL, Slots, Sports, Music, Art y otras que no son videojuegos.
+    **{get_text(lang, "acerca_limitaciones")}**
+    - {get_text(lang, "acerca_lim1")}
+    - {get_text(lang, "acerca_lim2")}
 
-    **Limitaciones:**
-    - Sin histórico retroactivo — la serie temporal empieza desde la primera ejecución
-    - Top 100 máximo por petición
-
-    **Cómo ejecutar:**
+    **{get_text(lang, "acerca_ejecutar")}**
     ```bash
     pip install -r requirements.txt
     python ingesta.py --sintetico    # datos para demo
@@ -463,29 +478,30 @@ def pestaña_acerca():
     python -m streamlit run app.py
     ```
 
-    **Tecnologías:** Python, SQLite, Streamlit, Plotly, ChromaDB, Ollama
+    **{get_text(lang, "acerca_tech")}** Python, SQLite, Streamlit, Plotly, ChromaDB, Ollama
     """)
 
 
 def pestaña_chat():
-    st.markdown("### 💬 Chat — Pregúntale a tus datos")
+    lang = st.session_state.get("lang", "es")
+    st.markdown("### " + get_text(lang, "chat_title"))
     if "historial" not in st.session_state:
         st.session_state.historial = []
-    k_fichas = st.slider("Número de fichas a recuperar (k)", 1, 10, 3)
+    k_fichas = st.slider(get_text(lang, "chat_slider"), 1, 10, 3)
     for msg in st.session_state.historial:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
-    pregunta = st.chat_input("Pregunta sobre tendencias de juegos en Twitch...")
+    pregunta = st.chat_input(get_text(lang, "chat_input"))
     if pregunta:
         st.session_state.historial.append({"role": "user", "content": pregunta})
         with st.chat_message("user"):
             st.markdown(pregunta)
         with st.chat_message("assistant"):
-            with st.spinner("Buscando en los datos..."):
+            with st.spinner("..."):
                 respuesta = generar_respuesta_rag(pregunta, k_fichas)
             st.markdown(respuesta)
         st.session_state.historial.append({"role": "assistant", "content": respuesta})
-    if st.button("🗑️ Borrar conversación"):
+    if st.button(get_text(lang, "chat_borrar")):
         st.session_state.historial = []
         st.rerun()
 
@@ -555,11 +571,16 @@ def generar_respuesta_rag(pregunta, k=3):
 
 
 def main():
+    if "lang" not in st.session_state:
+        st.session_state["lang"] = "es"
+    lang = st.session_state.get("lang", "es")
     header()
     df = cargar_datos()
     fecha_inicio, fecha_fin = sidebar_filtros(df)
     tab_resumen, tab_ranking, tab_tendencias, tab_subida, tab_acerca, tab_chat = st.tabs([
-        "📊 Resumen", "🏅 Ranking", "📈 Tendencias", "🚀 En subida", "ℹ️ Acerca", "💬 Chat",
+        get_text(lang, "tab_resumen"), get_text(lang, "tab_ranking"),
+        get_text(lang, "tab_tendencias"), get_text(lang, "tab_subida"),
+        get_text(lang, "tab_acerca"), get_text(lang, "tab_chat"),
     ])
     with tab_resumen:
         pestaña_resumen(df)
