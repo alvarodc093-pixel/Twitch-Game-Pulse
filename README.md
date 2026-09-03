@@ -79,7 +79,7 @@ python -m streamlit run app.py
 
 La app se abrirá en http://localhost:8501
 
-> **¿No quieres instalar nada?** Prueba la versión hosted: [Twitch Game Pulse — Online](http://81.40.231.242:8501)
+> **¿No quieres instalar nada?** Prueba la versión hosted: [Twitch Game Pulse — Online](https://twitch-game-pulse-yxsppvdvpqnt9wit6rezxt.streamlit.app)
 
 ### 6. (Opcional) Ejecutar el notebook de análisis
 
