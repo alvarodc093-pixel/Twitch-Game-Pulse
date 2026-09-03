@@ -375,19 +375,60 @@ def pestaña_ranking(df, fecha_inicio, fecha_fin):
     if df.empty:
         st.warning(get_text(lang, "no_data"))
         return
-    if fecha_inicio and fecha_fin:
-        df_filtrado = df[(df["fecha"] >= fecha_inicio) & (df["fecha"] <= fecha_fin)]
+
+    fechas_disponibles = sorted(df["fecha"].unique(), reverse=True)
+    fecha_sel = st.selectbox(
+        get_text(lang, "ranking_fecha"),
+        fechas_disponibles,
+        format_func=lambda x: x.strftime("%d/%m/%Y") if hasattr(x, "strftime") else str(x),
+        key="ranking_fecha_sel",
+    )
+    df_fecha = df[df["fecha"] == fecha_sel]
+    ultimo = obtener_ultimo_snapshot(df_fecha)
+
+    col_hoy, col_ayer = st.columns(2)
+
+    with col_hoy:
+        st.markdown(f"**{get_text(lang, 'ranking_hoy')}** ({fecha_sel})")
+        mostrar = ultimo[["nombre", "viewers", "num_streams"]].copy()
+        mostrar.columns = [get_text(lang, "col_juego"), get_text(lang, "col_viewers"),
+                           get_text(lang, "col_streams")]
+        mostrar = mostrar.reset_index(drop=True)
+        mostrar.index = mostrar.index + 1
+        mostrar.index.name = "#"
+        st.dataframe(mostrar, use_container_width=True)
+
+    idx_ayer = fechas_disponibles.index(fecha_sel) + 1 if fecha_sel in fechas_disponibles else -1
+    if idx_ayer < len(fechas_disponibles):
+        fecha_ayer = fechas_disponibles[idx_ayer]
+        df_ayer = df[df["fecha"] == fecha_ayer]
+        ultimo_ayer = obtener_ultimo_snapshot(df_ayer)
+
+        with col_ayer:
+            st.markdown(f"**{get_text(lang, 'ranking_ayer')}** ({fecha_ayer})")
+            mostrar_ayer = ultimo_ayer[["nombre", "viewers", "num_streams"]].copy()
+            mostrar_ayer.columns = [get_text(lang, "col_juego"), get_text(lang, "col_viewers"),
+                                    get_text(lang, "col_streams")]
+            mostrar_ayer = mostrar_ayer.reset_index(drop=True)
+            mostrar_ayer.index = mostrar_ayer.index + 1
+            mostrar_ayer.index.name = "#"
+            st.dataframe(mostrar_ayer, use_container_width=True)
+
+        st.markdown("---")
+        st.markdown(f"**{get_text(lang, 'ranking_comparativa')}**")
+        top5_hoy = set(ultimo.head(5)["nombre"])
+        top5_ayer = set(ultimo_ayer.head(5)["nombre"])
+        nuevos = top5_hoy - top5_ayer
+        salidos = top5_ayer - top5_hoy
+        if nuevos:
+            st.success(f"**{get_text(lang, 'ranking_nuevos')}:** {', '.join(nuevos)}")
+        if salidos:
+            st.warning(f"**{get_text(lang, 'ranking_salidos')}:** {', '.join(salidos)}")
+        if not nuevos and not salidos:
+            st.info(get_text(lang, 'ranking_mismo'))
     else:
-        df_filtrado = df
-    ultimo = obtener_ultimo_snapshot(df_filtrado)
-    mostrar = ultimo[["nombre", "viewers", "num_streams", "timestamp"]].copy()
-    mostrar.columns = [get_text(lang, "col_juego"), get_text(lang, "col_viewers"),
-                       get_text(lang, "col_streams"), get_text(lang, "col_fecha")]
-    mostrar[get_text(lang, "col_fecha")] = mostrar[get_text(lang, "col_fecha")].dt.strftime("%d/%m/%Y %H:%M")
-    mostrar = mostrar.reset_index(drop=True)
-    mostrar.index = mostrar.index + 1
-    mostrar.index.name = "#"
-    st.dataframe(mostrar, use_container_width=True)
+        with col_ayer:
+            st.info(get_text(lang, "ranking_no_ayer"))
 
 
 def pestaña_tendencias(df, fecha_inicio, fecha_fin):
