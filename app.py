@@ -502,13 +502,55 @@ def pestaña_eda(df):
         st.warning(get_text(lang, "no_data"))
         return
 
-    ultimo = obtener_ultimo_snapshot(df)
+    fechas_disponibles = sorted(df["fecha"].unique(), reverse=True)
+    col_sel, col_cmp = st.columns([1, 1])
+    with col_sel:
+        fecha_sel = st.selectbox(
+            get_text(lang, "eda_fecha"),
+            fechas_disponibles,
+            format_func=lambda x: x.strftime("%d/%m/%Y") if hasattr(x, "strftime") else str(x),
+            key="eda_fecha_sel",
+        )
+    with col_cmp:
+        opciones_cmp = [get_text(lang, "eda_cmp_ninguna")] + [
+            x.strftime("%d/%m/%Y") if hasattr(x, "strftime") else str(x)
+            for x in fechas_disponibles if x != fecha_sel
+        ]
+        cmp_label = st.selectbox(
+            get_text(lang, "eda_cmp"),
+            opciones_cmp,
+            key="eda_cmp_sel",
+        )
+        fecha_cmp = None
+        if cmp_label != get_text(lang, "eda_cmp_ninguna"):
+            for f in fechas_disponibles:
+                if f.strftime("%d/%m/%Y") == cmp_label:
+                    fecha_cmp = f
+                    break
+
+    df_sel = df[df["fecha"] == fecha_sel]
+    ultimo = obtener_ultimo_snapshot(df_sel)
     total_viewers = ultimo["viewers"].sum()
     top5_viewers = ultimo.head(5)["viewers"].sum()
     top5_pct = top5_viewers / total_viewers * 100
 
+    if fecha_cmp:
+        df_cmp = df[df["fecha"] == fecha_cmp]
+        ultimo_cmp = obtener_ultimo_snapshot(df_cmp)
+        total_viewers_cmp = ultimo_cmp["viewers"].sum()
+        top5_viewers_cmp = ultimo_cmp.head(5)["viewers"].sum()
+        top5_pct_cmp = top5_viewers_cmp / total_viewers_cmp * 100
+
+        st.markdown(f"**Comparando {fecha_sel.strftime('%d/%m/%Y')} vs {fecha_cmp.strftime('%d/%m/%Y')}**")
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.metric(f"Top 5 {fecha_sel.strftime('%d/%m/%Y')}", f"{top5_pct:.1f}%")
+        with col_b:
+            st.metric(f"Top 5 {fecha_cmp.strftime('%d/%m/%Y')}", f"{top5_pct_cmp:.1f}%",
+                      delta=f"{top5_pct - top5_pct_cmp:+.1f}%")
+
     # Sección 1: Ranking de audiencia
-    st.markdown("#### 1. Ranking de audiencia — ¿Quién gana la atención?")
+    st.markdown(f"#### 1. Ranking de audiencia — {fecha_sel.strftime('%d/%m/%Y')}")
     col1, col2 = st.columns([2, 1])
     with col1:
         top10 = ultimo.head(10)
@@ -526,6 +568,26 @@ def pestaña_eda(df):
         fig_pie.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#EFEFEF"), showlegend=False)
         fig_pie.update_traces(textposition="inside", textinfo="percent+label")
         st.plotly_chart(fig_pie, use_container_width=True)
+
+    if fecha_cmp:
+        st.markdown(f"**Comparativa — {fecha_cmp.strftime('%d/%m/%Y')}**")
+        col3, col4 = st.columns([2, 1])
+        with col3:
+            top10_cmp = ultimo_cmp.head(10)
+            fig_cmp = px.bar(top10_cmp, x="nombre", y="viewers", color="viewers",
+                color_continuous_scale="viridis",
+                labels={"nombre": get_text(lang, "col_juego"), "viewers": get_text(lang, "col_viewers")})
+            fig_cmp.update_layout(xaxis_tickangle=-45, showlegend=False, paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#EFEFEF"))
+            st.plotly_chart(fig_cmp, use_container_width=True)
+        with col4:
+            st.markdown(f"**Top 5 concentran {top5_pct_cmp:.1f}%**")
+            top5_cmp = ultimo_cmp.head(5)
+            fig_pie_cmp = px.pie(top5_cmp, values="viewers", names="nombre",
+                color_discrete_sequence=["#9146FF", "#BF94FF", "#7B2FCC", "#448AFF", "#00C853"])
+            fig_pie_cmp.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#EFEFEF"), showlegend=False)
+            fig_pie_cmp.update_traces(textposition="inside", textinfo="percent+label")
+            st.plotly_chart(fig_pie_cmp, use_container_width=True)
     st.markdown("---")
 
     # Sección 2: Evolución temporal
@@ -540,6 +602,11 @@ def pestaña_eda(df):
         markers=True)
     fig_line.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
         font=dict(color="#EFEFEF"), legend_title_text=get_text(lang, "col_juego"))
+    if fecha_cmp:
+        fig_line.add_vline(x=str(fecha_sel), line_dash="dash", line_color="#9146FF",
+                           annotation_text=fecha_sel.strftime("%d/%m"))
+        fig_line.add_vline(x=str(fecha_cmp), line_dash="dash", line_color="#BF94FF",
+                           annotation_text=fecha_cmp.strftime("%d/%m"))
     st.plotly_chart(fig_line, use_container_width=True)
     st.markdown("---")
 
@@ -585,6 +652,18 @@ def pestaña_eda(df):
     fig_vps.update_layout(showlegend=False, paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#EFEFEF"))
     st.plotly_chart(fig_vps, use_container_width=True)
+
+    if fecha_cmp:
+        st.markdown(f"**Eficiencia — {fecha_cmp.strftime('%d/%m/%Y')}**")
+        ultimo_vps_cmp = ultimo_cmp.copy()
+        ultimo_vps_cmp["vps"] = ultimo_vps_cmp["viewers"] / ultimo_vps_cmp["num_streams"]
+        top_vps_cmp = ultimo_vps_cmp.sort_values("vps", ascending=False).head(10)
+        fig_vps_cmp = px.bar(top_vps_cmp.sort_values("vps", ascending=True), x="vps", y="nombre", orientation="h",
+            color="vps", color_continuous_scale="plasma",
+            labels={"nombre": get_text(lang, "col_juego"), "vps": "Viewers / Stream"})
+        fig_vps_cmp.update_layout(showlegend=False, paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#EFEFEF"))
+        st.plotly_chart(fig_vps_cmp, use_container_width=True)
 
     # Síntesis
     st.markdown("---")
