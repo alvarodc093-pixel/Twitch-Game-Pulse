@@ -325,7 +325,16 @@ def pestaña_resumen(df):
     if df.empty:
         st.warning(get_text(lang, "no_data"))
         return
-    ultimo = obtener_ultimo_snapshot(df)
+
+    fechas_disponibles = sorted(df["fecha"].unique(), reverse=True)
+    fecha_sel = st.selectbox(
+        get_text(lang, "ranking_fecha"),
+        fechas_disponibles,
+        format_func=lambda x: x.strftime("%d/%m/%Y") if hasattr(x, "strftime") else str(x),
+        key="resumen_fecha_sel",
+    )
+    df_fecha = df[df["fecha"] == fecha_sel]
+    ultimo = obtener_ultimo_snapshot(df_fecha)
     total_viewers = ultimo["viewers"].sum()
     total_juegos = len(ultimo)
     total_streams = ultimo["num_streams"].sum()
@@ -346,7 +355,7 @@ def pestaña_resumen(df):
     col_izq, col_der = st.columns([2, 1])
 
     with col_izq:
-        st.markdown("### " + get_text(lang, "top10_title"))
+        st.markdown(f"### {get_text(lang, 'top10_title')} — {fecha_sel.strftime('%d/%m/%Y')}")
         top10 = ultimo.head(10)
         fig = px.bar(top10, x="nombre", y="viewers", color="viewers",
             color_continuous_scale=[[0, "#231D30"], [0.5, "#7B2FCC"], [1, "#BF94FF"]],
@@ -359,7 +368,7 @@ def pestaña_resumen(df):
         st.plotly_chart(fig, use_container_width=True)
 
     with col_der:
-        st.markdown("### " + get_text(lang, "pie_title"))
+        st.markdown(f"### {get_text(lang, 'pie_title')} — {fecha_sel.strftime('%d/%m/%Y')}")
         top5 = ultimo.head(5).copy()
         fig_pie = px.pie(top5, values="viewers", names="nombre",
             color_discrete_sequence=["#9146FF", "#BF94FF", "#7B2FCC", "#448AFF", "#00C853"])
