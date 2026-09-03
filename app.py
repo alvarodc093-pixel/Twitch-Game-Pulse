@@ -746,10 +746,27 @@ def detectar_genero(pregunta):
     return None, []
 
 
+def detectar_tipo_pregunta(pregunta):
+    pregunta_lower = pregunta.lower()
+    palabras_crecimiento = ["creci", "crecimiento", "subida", "subio", "aumento",
+                            "ha crecido", "mas crecio", "en subida", "está subiendo",
+                            "esta subiendo", "ha ganado", "más viewers", "mas viewers"]
+    palabras_top = ["mas visto", "más visto", "top", "primero", "lider", "líder",
+                    "quien tiene", "cuál tiene", "cual tiene", "mas audiencia"]
+    for p in palabras_crecimiento:
+        if p in pregunta_lower:
+            return "crecimiento"
+    for p in palabras_top:
+        if p in pregunta_lower:
+            return "top"
+    return "top"
+
+
 def generar_respuesta_rag(pregunta, k=3):
     if not os.path.exists(CHROMA_PATH):
         return "No hay corpus. Ejecuta: python preparar_corpus.py"
     genero, juegos_genero = detectar_genero(pregunta)
+    tipo = detectar_tipo_pregunta(pregunta)
     try:
         client = chromadb.PersistentClient(path=CHROMA_PATH)
         collection = client.get_collection("twitch_games")
@@ -759,27 +776,63 @@ def generar_respuesta_rag(pregunta, k=3):
             cur.execute("SELECT DATE(MAX(timestamp)) FROM snapshots_audiencia")
             fecha_max = cur.fetchone()[0]
             placeholders = ",".join(["?" for _ in juegos_genero])
-            query = f'''
-                SELECT j.nombre, MAX(s.viewers) as viewers, MAX(s.num_streams) as num_streams
-                FROM snapshots_audiencia s
-                JOIN juegos j ON j.id = s.juego_id
-                WHERE j.nombre IN ({placeholders})
-                AND DATE(s.timestamp) = ?
-                GROUP BY j.nombre
-                ORDER BY viewers DESC
-                LIMIT ?
-            '''
-            cur.execute(query, juegos_genero + [fecha_max, k])
-            rows = cur.fetchall()
-            conn.close()
-            if not rows:
-                return "No encontre juegos de ese genero en los datos."
-            respuesta = "**Resultados encontrados:**\n\n"
-            for i, (nombre, viewers, streams) in enumerate(rows, 1):
-                respuesta += f"**{i}. {nombre}**\n"
-                respuesta += f"   - Viewers: {viewers:,}\n"
-                respuesta += f"   - Streams: {streams:,}\n\n"
-            return respuesta
+
+            if tipo == "crecimiento":
+                from datetime import timedelta
+                fecha_max_dt = __import__('datetime').datetime.strptime(fecha_max, '%Y-%m-%d').date()
+                inicio_actual = fecha_max_dt - timedelta(days=7)
+                inicio_anterior = inicio_actual - timedelta(days=7)
+                query_crec = f'''
+                    SELECT j.nombre,
+                           AVG(CASE WHEN DATE(s.timestamp) > ? AND DATE(s.timestamp) <= ? THEN s.viewers END) as viewers_actual,
+                           AVG(CASE WHEN DATE(s.timestamp) > ? AND DATE(s.timestamp) <= ? THEN s.viewers END) as viewers_anterior
+                    FROM snapshots_audiencia s
+                    JOIN juegos j ON j.id = s.juego_id
+                    WHERE j.nombre IN ({placeholders})
+                    GROUP BY j.nombre
+                    HAVING viewers_anterior > 0
+                    ORDER BY (viewers_actual - viewers_anterior) * 100.0 / viewers_anterior DESC
+                    LIMIT ?
+                '''
+                cur.execute(query_crec, [str(inicio_anterior), str(fecha_max_dt),
+                                          str(inicio_anterior), str(inicio_actual)] +
+                           juegos_genero + [k])
+                rows = cur.fetchall()
+                conn.close()
+                if not rows:
+                    return "No encontre datos de crecimiento para ese genero."
+                respuesta = f"**Crecimiento de {genero} (ultima semana vs anterior):**\n\n"
+                for i, (nombre, actual, anterior) in enumerate(rows, 1):
+                    if anterior and anterior > 0:
+                        crec = (actual - anterior) / anterior * 100
+                        emoji = "📈" if crec > 0 else "📉"
+                        respuesta += f"**{i}. {nombre}** {emoji}\n"
+                        respuesta += f"   - Viewers anterior: {anterior:,.0f}\n"
+                        respuesta += f"   - Viewers actual: {actual:,.0f}\n"
+                        respuesta += f"   - Crecimiento: **{crec:+.1f}%**\n\n"
+                return respuesta
+            else:
+                query = f'''
+                    SELECT j.nombre, MAX(s.viewers) as viewers, MAX(s.num_streams) as num_streams
+                    FROM snapshots_audiencia s
+                    JOIN juegos j ON j.id = s.juego_id
+                    WHERE j.nombre IN ({placeholders})
+                    AND DATE(s.timestamp) = ?
+                    GROUP BY j.nombre
+                    ORDER BY viewers DESC
+                    LIMIT ?
+                '''
+                cur.execute(query, juegos_genero + [fecha_max, k])
+                rows = cur.fetchall()
+                conn.close()
+                if not rows:
+                    return "No encontre juegos de ese genero en los datos."
+                respuesta = f"**Top {genero} por audiencia:**\n\n"
+                for i, (nombre, viewers, streams) in enumerate(rows, 1):
+                    respuesta += f"**{i}. {nombre}**\n"
+                    respuesta += f"   - Viewers: {viewers:,}\n"
+                    respuesta += f"   - Streams: {streams:,}\n\n"
+                return respuesta
         else:
             resultados = collection.query(query_texts=[pregunta], n_results=k)
             if not resultados["documents"] or not resultados["documents"][0]:
