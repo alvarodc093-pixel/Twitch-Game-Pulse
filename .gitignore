@@ -1,6 +1,4 @@
 secrets.toml
-data/chroma/
-data/*.db
 __pycache__/
 *.pyc
 .venv/
