@@ -77,7 +77,7 @@ python preparar_corpus.py
 python -m streamlit run app.py
 ```
 
-La app se abrirá en http://localhost:8501
+La app se abrirá en https://twitch-game-pulse-yxsppvdvpqnt9wit6rezxt.streamlit.app/
 
 > **¿No quieres instalar nada?** Prueba la versión hosted: [Twitch Game Pulse — Online](https://twitch-game-pulse-yxsppvdvpqnt9wit6rezxt.streamlit.app)
 
